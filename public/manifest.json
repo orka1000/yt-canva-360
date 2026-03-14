@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "YT Canva 360",
+  "version": "1.0.0",
+  "description": "360 view of YouTube bookmarks with AI organization",
+  "permissions": [
+    "bookmarks",
+    "storage"
+  ],
+  "action": {
+    "default_title": "Open YT Canva"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
