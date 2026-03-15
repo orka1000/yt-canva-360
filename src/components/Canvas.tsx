@@ -1,7 +1,18 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
+import { useMemo, useCallback } from 'react';
+import { 
+  ReactFlow, 
+  Background, 
+  Controls, 
+  BackgroundVariant,
+  useNodesState,
+  applyNodeChanges,
+  type NodeChange,
+  type NodeTypes
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
 import BookmarkNode from './BookmarkNode';
-import type { Bookmark } from './BookmarkNode';
+import type { Bookmark, BookmarkNodeType } from './BookmarkNode';
 
 interface CanvasProps {
   bookmarks: Bookmark[];
@@ -9,92 +20,69 @@ interface CanvasProps {
   children?: React.ReactNode;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark, children }) => {
-  const [scale, setScale] = useState(1);
-  const [viewport, setViewport] = useState({ x1: 0, y1: 0, x2: 0, y2: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+const nodeTypes: NodeTypes = {
+  bookmarkNode: BookmarkNode,
+};
 
-  // Update viewport bounds for culling
-  const updateViewport = useCallback(() => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const currentX = x.get();
-    const currentY = y.get();
-    
-    // Calculate the logical coordinates visible in the viewport
-    // Taking into account that the canvas is centered at 5000,5000
-    const padding = 500 / scale; // Buffer for smooth scrolling
-    setViewport({
-      x1: 5000 - (currentX + rect.width / 2) / scale - padding,
-      y1: 5000 - (currentY + rect.height / 2) / scale - padding,
-      x2: 5000 - (currentX - rect.width / 2) / scale + padding,
-      y2: 5000 - (currentY - rect.height / 2) / scale + padding,
-    });
-  }, [x, y, scale]);
+const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark }) => {
+  // Map bookmarks to React Flow nodes
+  const initialNodes: BookmarkNodeType[] = useMemo(() => 
+    bookmarks.map((b) => ({
+      id: b.id,
+      type: 'bookmarkNode',
+      position: { x: b.x, y: b.y },
+      data: b,
+    })), [bookmarks]);
 
-  useEffect(() => {
-    updateViewport();
-    const unsubX = x.on('change', updateViewport);
-    const unsubY = y.on('change', updateViewport);
-    return () => { unsubX(); unsubY(); };
-  }, [updateViewport, x, y]);
+  const [nodes, setNodes] = useNodesState<BookmarkNodeType>(initialNodes);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      // Zoom
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      const newScale = Math.min(Math.max(scale * delta, 0.1), 5);
-      setScale(newScale);
-    } else {
-      // Pan
-      x.set(x.get() - e.deltaX);
-      y.set(y.get() - e.deltaY);
-    }
-  };
+  // Sync internal nodes with props if bookmarks change externally
+  useMemo(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => 
+        applyNodeChanges<BookmarkNodeType>(changes as NodeChange<BookmarkNodeType>[], nds)
+      );
+      
+      // Persist coordinate changes
+      changes.forEach((change) => {
+        if (change.type === 'position' && change.position && 'id' in change) {
+          updateBookmark(change.id, {
+            x: change.position.x,
+            y: change.position.y,
+          });
+        }
+      });
+    },
+    [setNodes, updateBookmark]
+  );
 
   return (
-    <div 
-      ref={containerRef}
-      className="relative w-full h-screen overflow-hidden bg-background canvas-dot-grid touch-none"
-      onWheel={handleWheel}
-    >
-      <motion.div
-        drag
-        dragMomentum={false}
-        style={{ x, y, scale }}
-        className="absolute w-[10000px] h-[10000px] top-1/2 left-1/2 -mt-[5000px] -ml-[5000px] cursor-grab active:cursor-grabbing will-change-transform"
+    <div className="w-full h-screen bg-background relative overflow-hidden">
+      <ReactFlow
+        nodes={nodes}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        fitView
+        colorMode="dark"
+        minZoom={0.01}
+        maxZoom={10}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
       >
-        <div className="relative w-full h-full">
-          {bookmarks.map(bookmark => {
-            const isVisible = 
-              bookmark.x >= viewport.x1 && 
-              bookmark.x <= viewport.x2 && 
-              bookmark.y >= viewport.y1 && 
-              bookmark.y <= viewport.y2;
-            
-            if (!isVisible) return null;
-
-            return (
-              <BookmarkNode 
-                key={bookmark.id} 
-                bookmark={bookmark} 
-                onUpdate={updateBookmark} 
-                currentScale={scale}
-              />
-            );
-          })}
-          {children}
-        </div>
-      </motion.div>
-      
-      {/* UI Overlays */}
-      <div className="fixed bottom-6 right-6 flex items-center gap-4 p-2 glass rounded-full px-4 text-xs font-medium text-muted-foreground z-50">
-        <span>Zoom: {Math.round(scale * 100)}%</span>
-        <button onClick={() => setScale(1)} className="hover:text-foreground transition-colors">Reset</button>
-      </div>
+        <Background 
+          variant={BackgroundVariant.Dots} 
+          gap={25} 
+          size={1} 
+          color="rgba(255, 255, 255, 0.07)" 
+        />
+        <Controls 
+          className="glass border-white/10 !bg-transparent !fill-white/70"
+          showInteractive={false}
+        />
+      </ReactFlow>
     </div>
   );
 };
