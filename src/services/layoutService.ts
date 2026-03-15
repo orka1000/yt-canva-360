@@ -1,65 +1,89 @@
 import type { Bookmark } from '../components/BookmarkNode';
 
 interface LayoutOptions {
-  cols?: number;
-  spacingX?: number;
-  spacingY?: number;
+  groupBy?: 'category' | 'date';
   originX?: number;
   originY?: number;
 }
 
 /**
  * Calculates a neat grid layout for a set of bookmarks.
- * Groups by category but distributes them into 5 balanced vertical lanes.
+ * Each group (Category or Date) starts in its own new set of columns (a Lane).
+ * This creates a clear horizontal separation between different days/topics.
  */
 export const calculateGridLayout = (bookmarks: Bookmark[], options: LayoutOptions = {}): Bookmark[] => {
   const {
+    groupBy = 'category',
     originX = 5000,
     originY = 5000,
   } = options;
 
-  // Group by category to keep related videos together
+  // 1. Group items
   const groups: Record<string, Bookmark[]> = {};
   bookmarks.forEach((b) => {
-    const cat = b.category || 'Other';
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(b);
+    if (b.type === 'header') return;
+
+    let key = 'Other';
+    if (groupBy === 'category') {
+      key = b.category || 'Other';
+    } else if (groupBy === 'date') {
+      const date = new Date(b.date);
+      key = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase();
+    }
+    
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(b);
   });
 
-  const sortedCategories = Object.keys(groups).sort();
-  const allSortedBookmarks: Bookmark[] = [];
-  sortedCategories.forEach(cat => allSortedBookmarks.push(...groups[cat]));
+  const sortedKeys = Object.keys(groups);
+  if (groupBy === 'date') {
+    sortedKeys.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  } else {
+    sortedKeys.sort();
+  }
+
+  // 2. Layout Constants
+  const COLUMN_WIDTH = 340; 
+  const ROW_HEIGHT = 300;   
+  const HEADER_ROW_HEIGHT = 220; 
+  const COLS_PER_GROUP = 5;  // For each day, we allow 5 cards horizontally before wrapping
+  const GROUP_GAP = 800;     // Large horizontal gap between days/categories
 
   const result: Bookmark[] = [];
-  
-  const COLUMN_WIDTH = 320; 
-  const ROW_HEIGHT = 280;   
-  const COLS_PER_LANE = 8; 
-  const NUM_LANES = 5;      
-  const LANE_GAP = 500;     
+  let currentX = originX;
 
-  const LANE_WIDTH = COLUMN_WIDTH * COLS_PER_LANE;
-  
-  // Calculate how many items per lane for balancing
-  const itemsPerLane = Math.ceil(allSortedBookmarks.length / NUM_LANES);
-
-  allSortedBookmarks.forEach((b, globalIndex) => {
-    // Determine which of the 5 lanes this item belongs to
-    const laneIndex = Math.min(Math.floor(globalIndex / itemsPerLane), NUM_LANES - 1);
-    // Determine its position within that lane
-    const itemInLaneIndex = globalIndex % itemsPerLane;
-
-    const laneBaseX = originX + laneIndex * (LANE_WIDTH + LANE_GAP);
+  // 3. Sequential Group Placement
+  sortedKeys.forEach((key) => {
+    const groupItems = groups[key].sort((a, b) => b.date - a.date);
     
-    // Within the lane, it's a grid of COLS_PER_LANE width
-    const col = itemInLaneIndex % COLS_PER_LANE;
-    const row = Math.floor(itemInLaneIndex / COLS_PER_LANE);
-
+    // Inject Header at the start of the new group's column
     result.push({
-      ...b,
-      x: laneBaseX + col * COLUMN_WIDTH,
-      y: originY + row * ROW_HEIGHT,
+      id: `header-${key}-${Date.now()}-${Math.random()}`,
+      type: 'header',
+      label: key,
+      title: key,
+      url: '',
+      thumbnail: '',
+      date: Date.now(),
+      x: currentX,
+      y: originY
     });
+
+    // Place group items in a grid starting below the header
+    groupItems.forEach((item, index) => {
+      const col = index % COLS_PER_GROUP;
+      const row = Math.floor(index / COLS_PER_GROUP);
+
+      result.push({
+        ...item,
+        x: currentX + col * COLUMN_WIDTH,
+        y: originY + HEADER_ROW_HEIGHT + row * ROW_HEIGHT,
+      });
+    });
+
+    // Move currentX to the next group's starting position
+    // Width of this group + group gap
+    currentX += (COLS_PER_GROUP * COLUMN_WIDTH) + GROUP_GAP;
   });
 
   return result;

@@ -42,7 +42,13 @@ function App() {
 
   const handleGridLayout = () => {
     if (bookmarks.length === 0) return;
-    const organized = calculateGridLayout(bookmarks);
+    const organized = calculateGridLayout(bookmarks, { groupBy: 'category' });
+    setBookmarks(organized);
+  };
+
+  const handleTimeLayout = () => {
+    if (bookmarks.length === 0) return;
+    const organized = calculateGridLayout(bookmarks, { groupBy: 'date' });
     setBookmarks(organized);
   };
 
@@ -104,7 +110,14 @@ function App() {
           <Layers className="w-5 h-5" />
           <span className="absolute left-full ml-4 px-2 py-1 bg-black/80 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Grid Layout</span>
         </button>
-        <button className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all"><Youtube className="w-5 h-5" /></button>
+        <button 
+          onClick={handleTimeLayout}
+          className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all group relative"
+          title="Time Layout"
+        >
+          <Youtube className="w-5 h-5" />
+          <span className="absolute left-full ml-4 px-2 py-1 bg-black/80 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Time Layout</span>
+        </button>
         <button 
           onClick={handleAIOrganize}
           className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all group relative"

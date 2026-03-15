@@ -12,7 +12,8 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import BookmarkNode from './BookmarkNode';
-import type { Bookmark, BookmarkNodeType } from './BookmarkNode';
+import SectionHeader from './SectionHeader';
+import type { Bookmark, CanvasNodeType } from './BookmarkNode';
 
 interface CanvasProps {
   bookmarks: Bookmark[];
@@ -22,19 +23,20 @@ interface CanvasProps {
 
 const nodeTypes: NodeTypes = {
   bookmarkNode: BookmarkNode,
+  header: SectionHeader,
 };
 
 const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark }) => {
   // Map bookmarks to React Flow nodes
-  const initialNodes: BookmarkNodeType[] = useMemo(() => 
+  const initialNodes: CanvasNodeType[] = useMemo(() => 
     bookmarks.map((b) => ({
       id: b.id,
-      type: 'bookmarkNode',
+      type: b.type === 'header' ? 'header' : 'bookmarkNode',
       position: { x: b.x, y: b.y },
       data: b,
     })), [bookmarks]);
 
-  const [nodes, setNodes] = useNodesState<BookmarkNodeType>(initialNodes);
+  const [nodes, setNodes] = useNodesState<CanvasNodeType>(initialNodes);
 
   // Sync internal nodes with props if bookmarks change externally
   useEffect(() => {
@@ -44,7 +46,7 @@ const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark }) => {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((nds) => 
-        applyNodeChanges<BookmarkNodeType>(changes as NodeChange<BookmarkNodeType>[], nds)
+        applyNodeChanges<CanvasNodeType>(changes as NodeChange<CanvasNodeType>[], nds)
       );
       
       // Persist coordinate changes

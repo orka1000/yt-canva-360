@@ -12,13 +12,15 @@ export type Bookmark = {
   x: number;
   y: number;
   date: number;
+  type?: 'bookmark' | 'header';
+  label?: string;
 } & Record<string, unknown>;
 
 export type BookmarkNodeData = Bookmark;
 
-export type BookmarkNodeType = Node<BookmarkNodeData, 'bookmarkNode'>;
+export type CanvasNodeType = Node<BookmarkNodeData, 'bookmarkNode' | 'header'>;
 
-const BookmarkNode = ({ data, selected }: NodeProps<BookmarkNodeType>) => {
+const BookmarkNode = ({ data, selected }: NodeProps<CanvasNodeType>) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   
   // Note: currentScale is now handled by React Flow's viewport

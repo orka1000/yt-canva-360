@@ -7,12 +7,12 @@ export const importBookmarks = async (): Promise<Bookmark[]> => {
     return new Promise((resolve) => {
       chrome.bookmarks.getTree((tree) => {
         const youtubeBookmarks: Bookmark[] = [];
-        const lastTwoDays = Date.now() - (2 * 24 * 60 * 60 * 1000);
+        const lastFourteenDays = Date.now() - (14 * 24 * 60 * 60 * 1000);
         const traverse = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
           for (const node of nodes) {
             if (node.url && (node.url.includes('youtube.com/watch') || node.url.includes('youtu.be/'))) {
-              // Only include bookmarks from the last 2 days
-              if (node.dateAdded && node.dateAdded > lastTwoDays) {
+              // Only include bookmarks from the last 14 days
+              if (node.dateAdded && node.dateAdded > lastFourteenDays) {
                 youtubeBookmarks.push({
                   id: node.id,
                   title: node.title,
@@ -43,13 +43,13 @@ export const parseBookmarksHtml = async (file: File): Promise<Bookmark[]> => {
   const doc = parser.parseFromString(text, 'text/html');
   const links = Array.from(doc.querySelectorAll('a'));
   
-  const lastTwoDays = Date.now() - (2 * 24 * 60 * 60 * 1000);
+  const lastFourteenDays = Date.now() - (14 * 24 * 60 * 60 * 1000);
   
   return links
     .filter(link => {
       const url = link.getAttribute('href') || '';
       const dateAdded = parseInt(link.getAttribute('add_date') || '0') * 1000; // ADD_DATE is usually in seconds
-      return (url.includes('youtube.com/watch') || url.includes('youtu.be/')) && dateAdded > lastTwoDays;
+      return (url.includes('youtube.com/watch') || url.includes('youtu.be/')) && dateAdded > lastFourteenDays;
     })
     .map((link, index) => {
       const url = link.getAttribute('href') || '';
