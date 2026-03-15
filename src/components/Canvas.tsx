@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -37,7 +37,7 @@ const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark }) => {
   const [nodes, setNodes] = useNodesState<BookmarkNodeType>(initialNodes);
 
   // Sync internal nodes with props if bookmarks change externally
-  useMemo(() => {
+  useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
@@ -71,6 +71,7 @@ const Canvas: React.FC<CanvasProps> = ({ bookmarks, updateBookmark }) => {
         minZoom={0.01}
         maxZoom={10}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        proOptions={{ hideAttribution: true }}
       >
         <Background 
           variant={BackgroundVariant.Dots} 

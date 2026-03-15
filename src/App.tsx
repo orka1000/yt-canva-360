@@ -4,6 +4,7 @@ import type { Bookmark } from './components/BookmarkNode';
 import { Import, Sparkles, Youtube, Layers, Search, Settings as SettingsIcon } from 'lucide-react';
 import { importBookmarks, parseBookmarksHtml } from './services/bookmarkService';
 import { organizeBookmarksAI } from './services/aiService';
+import { calculateGridLayout } from './services/layoutService';
 
 function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -34,7 +35,14 @@ function App() {
 
   const handleAIOrganize = async () => {
     if (bookmarks.length === 0) return;
-    const organized = await organizeBookmarksAI(bookmarks);
+    const categorized = await organizeBookmarksAI(bookmarks);
+    const organized = calculateGridLayout(categorized);
+    setBookmarks(organized);
+  };
+
+  const handleGridLayout = () => {
+    if (bookmarks.length === 0) return;
+    const organized = calculateGridLayout(bookmarks);
     setBookmarks(organized);
   };
 
@@ -88,9 +96,23 @@ function App() {
 
       {/* Floating Toolbar */}
       <nav className="fixed left-6 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-50 p-2 glass rounded-2xl">
-        <button className="p-3 bg-white/10 rounded-xl text-white shadow-lg"><Layers className="w-5 h-5" /></button>
+        <button 
+          onClick={handleGridLayout}
+          className="p-3 bg-white/10 rounded-xl text-white shadow-lg group relative"
+          title="Grid Layout"
+        >
+          <Layers className="w-5 h-5" />
+          <span className="absolute left-full ml-4 px-2 py-1 bg-black/80 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Grid Layout</span>
+        </button>
         <button className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all"><Youtube className="w-5 h-5" /></button>
-        <button className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all"><Sparkles className="w-5 h-5" /></button>
+        <button 
+          onClick={handleAIOrganize}
+          className="p-3 hover:bg-white/5 rounded-xl text-muted-foreground transition-all group relative"
+          title="AI Organize"
+        >
+          <Sparkles className="w-5 h-5" />
+          <span className="absolute left-full ml-4 px-2 py-1 bg-black/80 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">AI Organize</span>
+        </button>
       </nav>
 
       {/* Main Canva */}
